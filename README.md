@@ -198,7 +198,7 @@ Minecraft does not say why it generates terrain on the CPU, but we think there a
 |---|---|
 | CPU | Intel Core i5-8400 (6 cores, 6 threads) |
 | GPU | NVIDIA GeForce GTX 1660 Super (Turing, compute capability 7.5, 22 SMs, 1,408 CUDA cores, 6 GB) |
-| RAM and OS | 16 GB, Windows 11 |
+| RAM and OS | 16 GB, Windows 10 |
 | Software | Visual Studio and CUDA Toolkit (versions to be added after installation), NVIDIA driver 617.42 |
 | Languages | C++ (CPU version), CUDA C++ (GPU version), Python (viewer and graphs only) |
 
@@ -241,3 +241,16 @@ NVIDIA Corporation. (n.d.). *CUDA C++ programming guide*. https://docs.nvidia.co
 Patel, A. J. (2015). *Making maps with noise functions*. Red Blob Games. https://www.redblobgames.com/maps/terrain-from-noise/
 
 Perlin, K. (2002). Improving noise. *ACM Transactions on Graphics, 21*(3), 681–682. https://doi.org/10.1145/566654.566636
+
+
+Changes since the approved proposal
+
+Dropped the managed-memory comparison: on Windows, CUDA doesn’t support prefetching managed memory, so that test can’t run as planned. We use cudaMalloc + cudaMemcpy, which also lets us time the copying directly (RQ4).
+Added a multi-core CPU version (OpenMP, 6 threads) next to the single-core one, so the GPU is also compared against the whole CPU.
+Tests change one setting at a time from a baseline instead of trying every combination.
+“Total GPU time” = copying the table in + kernels + copying the heights back. One-time setup is reported separately.
+
+VS Studio Settings
+Device: compute_75,sm_75, 1660 super uses 75 architecture
+Command line --fmad=false, turn shortcut off so we dont get mismatch values from cpu and gpu
+Hist: /openMP allows loop to run on seveal CPU cores, so we can compare 6 CPU cores to the others
