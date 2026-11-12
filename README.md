@@ -8,7 +8,7 @@
 
 In Minecraft, the world is made from a seed. For every (x, z) spot, or column, the game uses layered noise (similar to Perlin noise) to decide how high the ground is. Each column only needs its own coordinates, the seed, and a small lookup table, so every column can be worked out on its own. That is what makes it a good fit for parallel computing.
 
-We will build a simple version of this that only makes the height of each spot: no caves, structures or villages. We will write it twice and run both on the same PC. One is a normal C++ program that goes through the spots one at a time, and the other is a CUDA program that gives each spot to its own GPU thread. We will check that both give the same heights, then time them on different world sizes and terrain types (plains, hilly and mountains) to find out when the GPU actually becomes faster, and why.
+We will build a simple version of this that only makes the height of each spot: no caves, structures or villages. We will develop two versions of the terrain generator. which is sequential C++ version and a CUDA version that processes terrain columns in parallel. Both will be tested on the same computer to compare their performance. We will check that both give the same heights, then time them on different world sizes and terrain types (plains, hilly and mountains) to find out when the GPU actually becomes faster, and why.
 
 ## 1. Project Description
 
@@ -36,7 +36,7 @@ Nothing is loaded from a file. Everything is set by numbers we type in:
 | Octaves | Default per terrain type. For RQ2 we also try 1, 2, 4, 6 and 8 octaves on the hilly type. |
 | Block size | 16 × 16 (256 threads) by default. For RQ3 we also try 8 × 8, 32 × 16 and 32 × 32. |
 
-**A note on the last two rows.** More octaves adds more small details to the terrain, like rocks popping out of the hills. Fewer octaves gives smoother terrain, like the Chocolate Hills. Block size doesn't change the terrain at all. It only changes how the threads are grouped: many small groups or a few big ones.
+**A note on the last two rows.** Using more octaves creates more details in the terrain, while fewer octaves produces smoother terrain. The number of octaves also affects the computation time. Block size doesn't change the terrain at all. It only changes how the threads are grouped: many small groups or a few big ones.
 
 **Benchmark sizes** (used for timing, from one Minecraft chunk up to a Large world):
 
@@ -79,13 +79,13 @@ This part describes which parts of the program can run in parallel, and how we s
 
 In step 1, each column's result does not depend on any other column, so they can all be done at the same time. 
 
-Step 2 finds the highest point, the lowest point, and the total of all the heights. If every thread writes to the same result at the same time, they have to wait in line for each other, which is slow (this is the atomics version). So we also try a shared-memory version: the threads are split into groups (blocks), each group finds its own highest, lowest and total, and then we combine the group answers.
+Step 2 finds the highest point, the lowest point, and the total of all the heights. Using atomic operations allows multiple GPU threads to update the same result safely, but it may reduce performance due to contention. So we also try a shared-memory version: the threads are split into groups (blocks), each group finds its own highest, lowest and total, and then we combine the group answers.
 
 Step 3 checks if the terrain is smooth by comparing each column to its neighbors. Each column needs its neighbors' heights to already exist, so this only starts after all the heights are generated.
 
 ### Our plan for the GPU version
 
-- **One thread per column.** Each thread works out which column it owns from its block number and its position in the block. We launch enough blocks to cover the whole world, rounding up. Some threads in the last blocks fall outside the world, so each thread first checks `if (x < W && z < H)` and does nothing if it is outside. The odd edge-case sizes test this. Basically, each thread computes exactly one height, and a thread that has no column to compute (like in the edge-case sizes) simply does nothing.
+- **One thread per column.** Each thread works out which column it owns from its block number and its position in the block. We launch enough blocks to cover the whole world, rounding up. Some threads in the last blocks fall outside the world, so each thread first checks `if (x < W && z < H)` and does nothing if it is outside. The odd edge-case sizes test this. Each GPU thread calculates the height of one terrain column. Threads outside the world boundaries are skipped using a bounds check.
 - **Same function on CPU and GPU.** We write the height function once with `__host__ __device__`, so both versions run the same math. 
 - **Permutation table.** We build it once on the CPU from the seed (512 bytes) and copy it to the GPU. We test three places to keep it: global, constant and shared memory. Constant memory is fast when all threads read the same spot, but our threads read different spots, so we treat it as something to test, not as a sure speedup. Both versions use this same table, which is built on the CPU, so their outputs match and the comparison is fair.
 - **Block size.** We test 64, 256, 512 and 1024 threads per block (8 × 8, 16 × 16, 32 × 16, 32 × 32).
@@ -110,7 +110,7 @@ We use a Fisher-Yates shuffle. We start from the end of the list and swap each n
 
 **B. 2D Perlin noise (adapted from the improved version, Perlin 2002).**
 
-Imagine graph paper where every crossing has an arrow chosen from the permutation table. To get a value for a point, we look at the four crossings (corners) around the square it sits in. Each one pushes the value a little depending on how the point lines up with its arrow, then we blend the four pushes smoothly into one number. The fade curve keeps the blending smooth, so there are no sharp edges between squares. More octaves add small bumps on top, like rocky features. The result is a value between about -1 and 1. Nearby points give nearby values, so neighboring columns get similar heights.
+Perlin noise uses gradient vectors at grid points to generate smooth terrain values. The values from the surrounding corners are interpolated to calculate the height of each terrain column. Imagine graph paper where every crossing has an arrow chosen from the permutation table. To get a value for a point, we look at the four crossings (corners) around the square it sits in. Each one pushes the value a little depending on how the point lines up with its arrow, then we blend the four pushes smoothly into one number. The fade curve keeps the blending smooth, so there are no sharp edges between squares. More octaves add small bumps on top, like rocky features. The result is a value between about -1 and 1. Nearby points give nearby values, so neighboring columns get similar heights.
 
 ```text
 fade(t)       = 6t^5 - 15t^4 + 10t^3
@@ -132,7 +132,7 @@ noise(x, z):
 
 The result is a smooth value between about -1 and 1. Nearby inputs give nearby outputs, so neighboring columns get similar heights.
 
-**C. Octaves and terrain height.** Think of an octave as a zoom level. From far away you see one big smooth shape, closer you see hills on the slopes, and really close you see the rocks. The first layer is the big smooth shape, and each layer after it has twice the detail (lacunarity 2.0) and half the strength (persistence 0.5). We add the layers together, so we get a big hill with small bumps on it. Mountains also use **ridged** noise, which flips each layer so the places where the noise is near 0 become sharp ridges. With a low base frequency, we expect this to give long mountain ranges instead of random spikes.
+**C. Octaves and terrain height.** Octaves combine multiple noise layers with different frequencies and amplitudes. Lower frequencies generate large terrain features, while higher frequencies add smaller details. The first layer is the big smooth shape, and each layer after it has twice the detail (lacunarity 2.0) and half the strength (persistence 0.5). We add the layers together, so we get a big hill with small bumps on it. Mountains also use **ridged** noise, which flips each layer so the places where the noise is near 0 become sharp ridges. With a low base frequency, we expect this to give long mountain ranges instead of random spikes.
 
 ```text
 fbm(xw, zw):
@@ -190,7 +190,7 @@ Patel (2015) is a tutorial that uses the same octave and ridged-noise approach a
 
 The existing GPU noise work targets shading and texturing in graphics APIs (mostly 3D noise), and C2ME targets multi-core CPUs. Our project uses CUDA to generate a whole heightmap and focuses on measuring: the world size where the GPU wins, the effect of work per column, memory type and block size, and the cost of copying data. We report both kernel time and total time including transfers, and we use the same PC for the CPU and GPU. We do not claim a new terrain algorithm.
 
-Minecraft does not say why it generates terrain on the CPU, but we think there are a few reasons. The world is made in small 16 × 16 chunks, which is not much work for a GPU, and the results have to go back to the CPU anyway for things like mobs and collisions. Structures also have a lot of `if` conditions, which GPUs handle badly because threads that take different paths slow each other down. Servers may also have no GPU. This is our own guess. Our project tests the first reason directly by measuring how big the world has to be before the GPU is worth it.
+Minecraft does not say why it generates terrain on the CPU, but we think there are a few reasons. The world is made in small 16 × 16 chunks, which is not much work for a GPU, and the results have to go back to the CPU anyway for things like mobs and collisions. Structures also have a lot of `if` conditions, which GPUs handle badly because threads that take different paths slow each other down. Servers may also have no GPU. These are possible reasons for using CPU-based terrain generation. Our project will investigate whether CUDA becomes more efficient when the number of generated terrain columns increases.
 
 ## 4. Our setup
 
