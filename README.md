@@ -245,7 +245,7 @@ We used the following AI tools in this project:
 | Tool | What we used it for |
 |---|---|
 | Claude (Anthropic) | Reviewing the repo against the project requirements; verifying our C++ and CUDA syntax while refactoring the test harness, timing loop, and CSV output code in `src/main.cu`; writing `viewer/plots.py` and `SETUP.md`; drafting this mid-project update from our raw result files. |
-| Gemini (Google) | Double-checking CUDA API and OpenMP `#pragma` syntax whenever we ran into compiler errors or unexpected behavior; helping us understand why CPU and GPU floating-point outputs slightly differed before we found `--fmad=false`, and why PCIe memory transfers dominated our GTX 1660 SUPER runtime; generating initial 3D plotting boilerplate for `viewer/viewer.py`; refining and proofreading our Milestone #1 proposal and this update. |
+| Gemini (Google) | Double-checking CUDA API and OpenMP #pragma syntax whenever we ran into compiler errors or unexpected behavior; helping us understand why CPU and GPU floating-point outputs slightly differed during early prototyping (which led us to specify --fmad=false in our proposal), and why PCIe memory transfers dominated our GTX 1660 SUPER runtime; generating initial 3D plotting boilerplate for viewer/viewer.py; refining and proofreading our Milestone #1 proposal and this update.|
 
 The terrain math in `src/terrain.h` and the height kernel's design (one thread per column with a bounds check) were not changed by the Claude-assisted work above. All builds and measurements were run by the group on the test PC in section 2. The Week 13 kernels (constant and shared memory, and the statistics reductions) will be written by the group.
 
