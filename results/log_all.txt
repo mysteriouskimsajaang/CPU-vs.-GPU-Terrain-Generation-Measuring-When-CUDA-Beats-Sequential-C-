@@ -1,0 +1,106 @@
+=== Environment ===
+Run started        : 2026-11-12 21:46:50 (mode: all)
+CPU                : Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
+CPU logical cores  : 6
+OpenMP             : on, 6 threads for the all-cores CPU version
+Host compiler      : MSVC 195136260 (_MSC_VER 1951)
+Build              : Release (optimized)
+GPU                : NVIDIA GeForce GTX 1660 SUPER
+GPU details        : compute capability 7.5, 22 SMs, 6.0 GB
+CUDA toolkit       : 13.5 (compiled with), runtime 13.5, driver supports CUDA 13.5
+Managed prefetch   : not available on this system (concurrent managed access)
+GPU a*b+c merging  : off (--fmad=false is working)
+GPU one-time setup : 184.45 ms (start-up + cudaMalloc, not part of any timing)
+CPU a*b+c merging  : off
+Math               : 32-bit float on CPU and GPU, same functions (terrain.h)
+Seeds              : 3762183612631 (main), 42 (second test seed)
+Timing             : 1 warm-up run (thrown away) + 30 timed runs per case
+Baseline block     : 16 x 16 (256 threads per block)
+Speedup            : CPU median time / GPU median time
+GPU total time     : copy table in + kernel + copy heights back
+Results folder     : ../../results
+
+=== Heightmaps (1024x1024, seed 3762183612631, origin (0,0)) ===
+type       made by        min    max      avg   dmax   limit    davg  clamped
+plains     gpu_global      59     68    63.18      1       2   0.033        0
+hilly      gpu_global      59     84    71.29      1       4   0.217        0
+mountains  gpu_global      93    188   148.29      3       8   0.838        0
+dmax = biggest height step between neighboring columns; limit = our smoothness target.
+Saved stats.csv and <type>_1024x1024.bin / .bmp in ../../results
+
+=== Correctness tests: CPU vs. GPU ===
+Each case: heights must match the CPU (max difference <= 1, <= 0.01% of columns),
+two GPU runs must be identical, nothing may be written outside the array,
+and the biggest neighbor step (dmax) must be within the terrain type's limit.
+
+       size   block      grid      threads         idle   cases    passed   max diff worst dmax (plains/hilly/mountains)
+      1 x 1   16x16       1x1          256          255      18        18          0 0 / 0 / 0
+      3 x 3   16x16       1x1          256          247      18        18          0 0 / 1 / 2
+    2 x 100   16x16       1x7         1792         1592      18        18          0 1 / 1 / 3
+    100 x 2   16x16       7x1         1792         1592      18        18          0 1 / 1 / 3
+    15 x 17   16x16       1x2          512          257      18        18          0 1 / 1 / 2
+     17 x 5   16x16       2x1          512          427      18        18          0 1 / 1 / 2
+  255 x 257   16x16     16x17        69632         4097      18        18          0 1 / 1 / 3
+ 1001 x 777   16x16     63x49       790272        12495      18        18          0 1 / 1 / 3
+4097 x 4097   16x16   257x257     16908544       123135      18        18          0 1 / 1 / 4
+
+Passed 162 / 162 cases. Largest CPU-GPU height difference: 0. Columns that differ: 0.
+"idle" = threads that were launched but had no column (stopped by the bounds check).
+Saved correctness.csv (every case) and correctness_summary.csv (one row per size).
+
+=== Benchmark: world size (RQ1, RQ4) - seed 3762183612631, origin (0,0) ===
+type      oct        size  block version      CPU 1 core     CPU all   copy in     kernel  copy back  GPU total  x 1core    x all  x kernel  copy %
+plains      2     16 x 16  16x16 gpu_global     0.011 ms    0.006 ms  0.028 ms  0.0043 ms   0.023 ms   0.057 ms     0.2x     0.1x      2.5x   91.9%
+plains      2     32 x 32  16x16 gpu_global     0.041 ms    0.015 ms  0.024 ms  0.0037 ms   0.025 ms   0.052 ms     0.8x     0.3x     11.2x   93.0%
+plains      2     48 x 48  16x16 gpu_global     0.095 ms    0.033 ms  0.024 ms  0.0038 ms   0.023 ms   0.050 ms     1.9x     0.7x     25.1x   93.6%
+plains      2     64 x 64  16x16 gpu_global     0.164 ms    0.055 ms  0.048 ms  0.0037 ms   0.037 ms   0.089 ms     1.8x     0.6x     44.0x   96.4%
+plains      2   256 x 256  16x16 gpu_global     2.664 ms    0.484 ms  0.024 ms  0.0074 ms   0.087 ms   0.118 ms    22.5x     4.1x    362.0x   94.0%
+plains      2 1024 x 1024  16x16 gpu_global    43.579 ms   11.139 ms  0.053 ms  0.0655 ms   0.887 ms   1.006 ms    43.3x    11.1x    665.0x   93.5%
+plains      2 4096 x 4096  16x16 gpu_global   703.360 ms  183.273 ms  0.066 ms  0.9662 ms  13.753 ms  14.770 ms    47.6x    12.4x    728.0x   93.5%
+hilly       4     16 x 16  16x16 gpu_global     0.020 ms    0.005 ms  0.025 ms  0.0047 ms   0.023 ms   0.053 ms     0.4x     0.1x      4.3x   91.1%
+hilly       4     32 x 32  16x16 gpu_global     0.078 ms    0.016 ms  0.027 ms  0.0049 ms   0.027 ms   0.058 ms     1.3x     0.3x     15.9x   91.7%
+hilly       4     48 x 48  16x16 gpu_global     0.178 ms    0.032 ms  0.025 ms  0.0050 ms   0.024 ms   0.054 ms     3.3x     0.6x     35.9x   90.0%
+hilly       4     64 x 64  16x16 gpu_global     0.316 ms    0.103 ms  0.025 ms  0.0049 ms   0.024 ms   0.054 ms     5.9x     1.9x     63.9x   91.4%
+hilly       4   256 x 256  16x16 gpu_global     5.058 ms    1.440 ms  0.026 ms  0.0109 ms   0.090 ms   0.127 ms    39.9x    11.4x    462.9x   90.8%
+hilly       4 1024 x 1024  16x16 gpu_global    83.532 ms   24.246 ms  0.026 ms  0.1208 ms   0.806 ms   0.953 ms    87.6x    25.4x    691.3x   87.3%
+hilly       4 4096 x 4096  16x16 gpu_global  1352.629 ms  388.049 ms  0.121 ms  1.8668 ms  13.958 ms  15.944 ms    84.8x    24.3x    724.6x   88.3%
+mountains   6     16 x 16  16x16 gpu_global     0.029 ms    0.007 ms  0.024 ms  0.0060 ms   0.021 ms   0.052 ms     0.6x     0.1x      4.8x   89.3%
+mountains   6     32 x 32  16x16 gpu_global     0.120 ms    0.033 ms  0.049 ms  0.0061 ms   0.034 ms   0.089 ms     1.3x     0.4x     19.6x   93.0%
+mountains   6     48 x 48  16x16 gpu_global     0.272 ms    0.073 ms  0.025 ms  0.0061 ms   0.025 ms   0.056 ms     4.9x     1.3x     44.3x   89.4%
+mountains   6     64 x 64  16x16 gpu_global     0.485 ms    0.089 ms  0.025 ms  0.0061 ms   0.025 ms   0.055 ms     8.7x     1.6x     78.9x   88.9%
+mountains   6   256 x 256  16x16 gpu_global     7.873 ms    2.175 ms  0.026 ms  0.0156 ms   0.090 ms   0.132 ms    59.9x    16.5x    505.7x   88.2%
+mountains   6 1024 x 1024  16x16 gpu_global   130.469 ms   37.323 ms  0.032 ms  0.1827 ms   0.826 ms   1.067 ms   122.2x    35.0x    714.1x   82.8%
+mountains   6 4096 x 4096  16x16 gpu_global  2111.877 ms  582.812 ms  0.119 ms  2.8317 ms  13.977 ms  16.931 ms   124.7x    34.4x    745.8x   83.1%
+Times are medians of 30 runs. "x 1core" and "x all" = CPU time / GPU total time (copies included).
+"x kernel" = CPU 1 core / GPU kernel only. "copy %" = share of GPU total spent copying.
+CPU all-cores threads: 6
+Saved benchmark_sizes.csv (summary) and raw_sizes.csv (every single run).
+
+=== Benchmark: octaves (RQ2) - hilly, 1024 x 1024 ===
+type      oct        size  block version      CPU 1 core     CPU all   copy in     kernel  copy back  GPU total  x 1core    x all  x kernel  copy %
+hilly       1 1024 x 1024  16x16 gpu_global    25.995 ms    5.345 ms  0.030 ms  0.0411 ms   0.834 ms   0.921 ms    28.2x     5.8x    632.9x   95.5%
+hilly       2 1024 x 1024  16x16 gpu_global    43.501 ms   11.527 ms  0.028 ms  0.0656 ms   0.808 ms   0.917 ms    47.4x    12.6x    662.8x   92.8%
+hilly       4 1024 x 1024  16x16 gpu_global    83.532 ms   24.246 ms  0.055 ms  0.1226 ms   0.894 ms   1.072 ms    77.9x    22.6x    681.5x   88.6%
+hilly       6 1024 x 1024  16x16 gpu_global   145.391 ms   39.948 ms  0.053 ms  0.1980 ms   0.881 ms   1.133 ms   128.3x    35.3x    734.4x   82.6%
+hilly       8 1024 x 1024  16x16 gpu_global   245.836 ms   63.081 ms  0.053 ms  0.3128 ms   0.992 ms   1.370 ms   179.5x    46.1x    786.0x   77.2%
+Times are medians of 30 runs. "x 1core" and "x all" = CPU time / GPU total time (copies included).
+"x kernel" = CPU 1 core / GPU kernel only. "copy %" = share of GPU total spent copying.
+CPU all-cores threads: 6
+Saved benchmark_octaves.csv (summary) and raw_octaves.csv (every single run).
+
+=== Benchmark: threads per block (RQ3) - hilly ===
+type      oct        size  block version      CPU 1 core     CPU all   copy in     kernel  copy back  GPU total  x 1core    x all  x kernel  copy %
+hilly       4 1024 x 1024    8x8 gpu_global    83.532 ms   24.246 ms  0.029 ms  0.1186 ms   0.831 ms   0.980 ms    85.3x    24.8x    704.2x   87.9%
+hilly       4 1024 x 1024  16x16 gpu_global    83.532 ms   24.246 ms  0.043 ms  0.1230 ms   1.106 ms   1.265 ms    66.0x    19.2x    678.9x   90.3%
+hilly       4 1024 x 1024  32x16 gpu_global    83.532 ms   24.246 ms  0.030 ms  0.1311 ms   0.868 ms   1.050 ms    79.5x    23.1x    637.3x   87.5%
+hilly       4 1024 x 1024  32x32 gpu_global    83.532 ms   24.246 ms  0.031 ms  0.1378 ms   0.833 ms   1.005 ms    83.1x    24.1x    606.2x   86.3%
+hilly       4 4096 x 4096    8x8 gpu_global  1352.629 ms  388.049 ms  0.120 ms  1.8375 ms  14.358 ms  16.319 ms    82.9x    23.8x    736.1x   88.7%
+hilly       4 4096 x 4096  16x16 gpu_global  1352.629 ms  388.049 ms  0.120 ms  1.8911 ms  14.142 ms  16.150 ms    83.8x    24.0x    715.3x   88.2%
+hilly       4 4096 x 4096  32x16 gpu_global  1352.629 ms  388.049 ms  0.121 ms  2.0275 ms  15.231 ms  17.377 ms    77.8x    22.3x    667.1x   88.3%
+hilly       4 4096 x 4096  32x32 gpu_global  1352.629 ms  388.049 ms  0.083 ms  2.3213 ms  13.879 ms  16.256 ms    83.2x    23.9x    582.7x   85.9%
+Times are medians of 30 runs. "x 1core" and "x all" = CPU time / GPU total time (copies included).
+"x kernel" = CPU 1 core / GPU kernel only. "copy %" = share of GPU total spent copying.
+CPU all-cores threads: 6
+Saved benchmark_blocks.csv (summary) and raw_blocks.csv (every single run).
+
+Done. Next: run  py viewer\plots.py  to make the graphs, then commit the results folder.

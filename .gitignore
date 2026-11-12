@@ -1,0 +1,18 @@
+# Visual Studio and build output (rebuilt on each PC, not needed on GitHub)
+.vs/
+x64/
+Debug/
+Release/
+*.user
+*.exe
+*.pdb
+*.obj
+*.ilk
+*.ipch
+
+# Python
+__pycache__/
+*.pyc
+
+# Old output folder (results now go to the top-level results/ folder)
+TerrainGen/TerrainGen/results/

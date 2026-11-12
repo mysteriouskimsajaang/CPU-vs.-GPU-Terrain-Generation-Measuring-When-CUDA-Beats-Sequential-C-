@@ -1,16 +1,19 @@
 """Rotatable 3D terrain viewer (blue = low, red = high).
 
-Usage (from the project folder, after running the C++/CUDA program):
-    pip install numpy pyvista matplotlib
-    python viewer/viewer.py                      # opens results/hilly_1024x1024.bin
-    python viewer/viewer.py results/mountains_1024x1024.bin
+Usage (after running the C++/CUDA program):
+    py -m pip install numpy pyvista matplotlib
+    py viewer\\viewer.py                         # opens results/hilly_1024x1024.bin
+    py viewer\\viewer.py results\\mountains_1024x1024.bin
 
 Drag with the mouse to rotate, scroll to zoom. Not part of any timing.
 """
 import sys
+from pathlib import Path
 import numpy as np
 
-path = sys.argv[1] if len(sys.argv) > 1 else "results/hilly_1024x1024.bin"
+# Default file is found next to this script's repo, so it works from any folder.
+ROOT = Path(__file__).resolve().parent.parent
+path = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "results" / "hilly_1024x1024.bin")
 MAX_POINTS = 512          # downsample so it stays smooth
 HEIGHT_SCALE = 1.0        # raise this (e.g. 2.0) to make hills look taller
 

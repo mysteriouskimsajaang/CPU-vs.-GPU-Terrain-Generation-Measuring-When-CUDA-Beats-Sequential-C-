@@ -34,6 +34,12 @@ inline TerrainParams makePreset(int type) {
     }
 }
 
+// Smoothness target: largest allowed height step between two neighboring
+// columns, checked at each type's default octaves (README section C).
+inline int smoothnessLimit(int type) {
+    return type == PLAINS ? 2 : type == HILLY ? 4 : 8;
+}
+
 const int HEIGHT_MIN = -64;
 const int HEIGHT_MAX = 319;
 

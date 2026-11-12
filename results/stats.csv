@@ -1,0 +1,4 @@
+type,octaves,seed,width,height,made_by,matches_cpu,hmin,hmax,hsum,havg,dmax,davg,dmax_limit,smooth_pass,clamped
+plains,2,3762183612631,1024,1024,gpu_global,1,59,68,66251343,63.1822,1,0.032794,2,1,0
+hilly,4,3762183612631,1024,1024,gpu_global,1,59,84,74754468,71.2914,1,0.216714,4,1,0
+mountains,6,3762183612631,1024,1024,gpu_global,1,93,188,155489822,148.2866,3,0.837521,8,1,0

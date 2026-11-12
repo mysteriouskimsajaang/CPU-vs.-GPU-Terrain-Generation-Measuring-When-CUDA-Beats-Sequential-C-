@@ -1,0 +1,20 @@
+=== Environment ===
+Run started        : 2026-11-12 21:46:50 (mode: all)
+CPU                : Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
+CPU logical cores  : 6
+OpenMP             : on, 6 threads for the all-cores CPU version
+Host compiler      : MSVC 195136260 (_MSC_VER 1951)
+Build              : Release (optimized)
+GPU                : NVIDIA GeForce GTX 1660 SUPER
+GPU details        : compute capability 7.5, 22 SMs, 6.0 GB
+CUDA toolkit       : 13.5 (compiled with), runtime 13.5, driver supports CUDA 13.5
+Managed prefetch   : not available on this system (concurrent managed access)
+GPU a*b+c merging  : off (--fmad=false is working)
+GPU one-time setup : 184.45 ms (start-up + cudaMalloc, not part of any timing)
+CPU a*b+c merging  : off
+Math               : 32-bit float on CPU and GPU, same functions (terrain.h)
+Seeds              : 3762183612631 (main), 42 (second test seed)
+Timing             : 1 warm-up run (thrown away) + 30 timed runs per case
+Baseline block     : 16 x 16 (256 threads per block)
+Speedup            : CPU median time / GPU median time
+GPU total time     : copy table in + kernel + copy heights back
