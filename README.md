@@ -9,7 +9,7 @@
 
 # Mid-project update (Milestone #2, Week 10)
 
-**Demo video:** _add link here_
+**Demo video:** https://drive.google.com/file/d/1LpOSZzUjmj0VkShZRxVjjGx1XbWRmzWr/view?usp=sharing
 
 The CPU version and the first CUDA version (lookup table in global memory) are working for all three terrain types. On our test PC the two versions produce identical heights in all 162 correctness cases. The GPU becomes faster than one CPU core at about 32 × 32 to 48 × 48 columns, and at 4096 × 4096 it is 48× to 125× faster with data copies included. Copying data, not the kernel, takes most of the GPU's time.
 
