@@ -261,6 +261,8 @@ In Minecraft, the world is made from a seed. For every (x, z) spot, or column, t
 
 We will build a simple version of this that only makes the height of each spot: no caves, structures or villages. We will develop two versions of the terrain generator. which is sequential C++ version and a CUDA version that processes terrain columns in parallel. Both will be tested on the same computer to compare their performance. We will check that both give the same heights, then time them on different world sizes and terrain types (plains, hilly and mountains) to find out when the GPU actually becomes faster, and why.
 
+**Note:** This section contains our original approved proposal and is kept in its original future tense to show our initial project plan. The completed implementations, actual test results, and changes from the proposal are documented in the Milestone #2 update above. Remaining tasks are listed under "Left for Week 13."
+
 ## 1. Project Description
 
 Minecraft generates terrain one 16 × 16 chunk (256 columns) at a time, and performance mods such as C2ME spread this work over several CPU cores. A chunk is a small job for a GPU, because launching a kernel and copying data has a fixed cost. But if we generate a large world at once, the GPU may end up faster than the CPU. We will not copy Minecraft's generator exactly. We use it as a reference to build our own heightmap generator and measure how it performs.
@@ -416,7 +418,7 @@ We will also look at the heightmap picture and the highest and lowest heights to
 - All the noise math uses 32-bit `float` on both the CPU and GPU, so they do the same kind of math. Heights are whole numbers (`int`), and totals are 64-bit because a big world adds up to more than a normal `int` can hold.
 - We round down with `floorf`, then convert to `int`. We use floor because it handles negative heights the same way every time. Heights are clamped to [-64, 319], and we report how many columns were clamped (expected 0).
 - Our CPU and GPU should give exactly the same heights. We still allow a 1 block difference in case of tiny rounding differences, but we expect 0.
-- To keep both sides doing the same math, the GPU is compiled with `nvcc -O3 --fmad=false` and the CPU is built in Release mode without fast-math. These settings are shortcuts that make a number round a little differently, so we turn them off.
+- To keep both sides doing the same math, The GPU is compiled using the Visual Studio CUDA Release x64 configuration with `--fmad=false` to prevent fused multiply-add operations. The CPU is also built in Release mode without fast-math. These settings help maintain consistent floating-point calculations between the CPU and GPU implementations. These settings are shortcuts that make a number round a little differently, so we turn them off.
 - For the grayscale picture only, a height h is scaled to 0 to 255 using `round(255 * (h - hmin) / (hmax - hmin))`. There can be up to 384 different heights but only 256 grays, so a few heights may share a gray. If hmax = hmin, the picture is all one gray. This is just for display and is not part of the comparison.
 
 **E. Statistics.** We compute `hmax` (highest column), `hmin` (lowest column), `hsum` (all heights added up) and the average height. For smoothness, each column gets `d = max(|h(x,z) - h(x+1,z)|, |h(x,z) - h(x,z+1)|)`, which is how much its height differs from the neighbor next to it and the neighbor behind it. We only use neighbors that exist, so a 1 × 1 world has d = 0. We report `dmax` (the steepest spot) and the average d.
@@ -450,7 +452,7 @@ Minecraft does not say why it generates terrain on the CPU, but we think there a
 | CPU | Intel Core i5-8400 (6 cores, 6 threads) |
 | GPU | NVIDIA GeForce GTX 1660 Super (Turing, compute capability 7.5, 22 SMs, 1,408 CUDA cores, 6 GB) |
 | RAM and OS | 16 GB, Windows 10 |
-| Software | Visual Studio and CUDA Toolkit (versions to be added after installation), NVIDIA driver 617.42 |
+| Software | Visual Studio 2026 (MSVC 19.51), CUDA Toolkit 13.5, NVIDIA driver 617.42 |
 | Languages | C++ (CPU version), CUDA C++ (GPU version), Python (viewer and graphs only) |
 
 All results come from this one PC, so the CPU and GPU are compared on the same machine. Google Colab is not used for any reported result. If we ever test on another machine, its results go in a separate table.
