@@ -43,6 +43,8 @@ All results come from this one PC. The program writes these details to [`results
 
 ### Generated terrain
 
+![3D view of the mountains terrain](results/plots/3D%20viewer.png)
+
 ![The three terrain types](results/plots/heightmaps.png)
 
 | Type | Octaves | Lowest | Highest | Average | Steepest step | Limit | Clamped columns |
@@ -253,7 +255,7 @@ The terrain math in `src/terrain.h` and the height kernel's design (one thread p
 
 # Original proposal (Revised Milestone #1)
 
-_Kept as approved. Where the project now differs, see section 5 of the update above._
+This is our approved proposal, to show our initial plan. We corrected the software versions and build flags to match what we used during our mid milestone.
 
 ## Abstract
 
@@ -418,7 +420,7 @@ We will also look at the heightmap picture and the highest and lowest heights to
 - All the noise math uses 32-bit `float` on both the CPU and GPU, so they do the same kind of math. Heights are whole numbers (`int`), and totals are 64-bit because a big world adds up to more than a normal `int` can hold.
 - We round down with `floorf`, then convert to `int`. We use floor because it handles negative heights the same way every time. Heights are clamped to [-64, 319], and we report how many columns were clamped (expected 0).
 - Our CPU and GPU should give exactly the same heights. We still allow a 1 block difference in case of tiny rounding differences, but we expect 0.
-- To keep both sides doing the same math, The GPU is compiled using the Visual Studio CUDA Release x64 configuration with `--fmad=false` to prevent fused multiply-add operations. The CPU is also built in Release mode without fast-math. These settings help maintain consistent floating-point calculations between the CPU and GPU implementations. These settings are shortcuts that make a number round a little differently, so we turn them off.
+- To keep both sides doing the same math, the GPU is compiled in the Visual Studio CUDA Release x64 configuration with --fmad=false, which turns off fused multiply-add, and the CPU is built in Release mode without fast-math. Both shortcuts would make some numbers round slightly differently, so we leave them off.
 - For the grayscale picture only, a height h is scaled to 0 to 255 using `round(255 * (h - hmin) / (hmax - hmin))`. There can be up to 384 different heights but only 256 grays, so a few heights may share a gray. If hmax = hmin, the picture is all one gray. This is just for display and is not part of the comparison.
 
 **E. Statistics.** We compute `hmax` (highest column), `hmin` (lowest column), `hsum` (all heights added up) and the average height. For smoothness, each column gets `d = max(|h(x,z) - h(x+1,z)|, |h(x,z) - h(x,z+1)|)`, which is how much its height differs from the neighbor next to it and the neighbor behind it. We only use neighbors that exist, so a 1 × 1 world has d = 0. We report `dmax` (the steepest spot) and the average d.
